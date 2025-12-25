@@ -158,7 +158,10 @@ export default function Home() {
     }
 
     try {
-      if (!authToken) return;
+      if (!authToken) {
+        alert('인증 토큰이 없습니다. 다시 로그인해주세요.');
+        return;
+      }
 
       const response = await fetch('/api/debts', {
         method: 'POST',
@@ -174,6 +177,9 @@ export default function Home() {
         }),
       });
 
+      const responseData = await response.json();
+      console.log('API Response:', response.status, responseData);
+
       if (response.ok) {
         await fetchData(authToken);
         setNewDebt({
@@ -183,9 +189,13 @@ export default function Home() {
           paymentDate: '',
         });
         setShowAddDebtForm(false);
+        alert('대출이 추가되었습니다!');
+      } else {
+        alert(`대출 추가 실패: ${responseData.error || '알 수 없는 오류'}`);
       }
     } catch (error) {
       console.error('Error creating debt:', error);
+      alert(`오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
   };
 
@@ -197,7 +207,10 @@ export default function Home() {
     }
 
     try {
-      if (!authToken) return;
+      if (!authToken) {
+        alert('인증 토큰이 없습니다. 다시 로그인해주세요.');
+        return;
+      }
 
       const response = await fetch('/api/payments', {
         method: 'POST',
@@ -212,6 +225,9 @@ export default function Home() {
         }),
       });
 
+      const responseData = await response.json();
+      console.log('Payment API Response:', response.status, responseData);
+
       if (response.ok) {
         const randomMessage = messages[Math.floor(Math.random() * messages.length)];
         setShowMessage(randomMessage);
@@ -224,9 +240,12 @@ export default function Home() {
         });
         setShowPaymentForm(false);
         setSelectedDebtId(null);
+      } else {
+        alert(`상환금 기록 실패: ${responseData.error || '알 수 없는 오류'}`);
       }
     } catch (error) {
       console.error('Error creating payment:', error);
+      alert(`오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
   };
 
@@ -234,7 +253,10 @@ export default function Home() {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-      if (!authToken) return;
+      if (!authToken) {
+        alert('인증 토큰이 없습니다.');
+        return;
+      }
 
       const response = await fetch(`/api/debts/${id}`, {
         method: 'DELETE',
@@ -243,11 +265,18 @@ export default function Home() {
         },
       });
 
+      const responseData = await response.json();
+      console.log('Delete Response:', response.status, responseData);
+
       if (response.ok) {
         await fetchData(authToken);
+        alert('대출이 삭제되었습니다.');
+      } else {
+        alert(`삭제 실패: ${responseData.error || '알 수 없는 오류'}`);
       }
     } catch (error) {
       console.error('Error deleting debt:', error);
+      alert(`오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
   };
 
