@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Use service role key to bypass RLS for server-side operations
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(req: NextRequest) {
   try {
@@ -61,9 +62,11 @@ export async function POST(req: NextRequest) {
 
     if (!userError && userData.user) {
       userId = userData.user.id;
+      console.log('Using authenticated user ID:', userId);
     } else {
       // Fallback to default user ID
       userId = process.env.NEXT_PUBLIC_DEFAULT_USER_ID || null;
+      console.log('Using default user ID:', userId);
     }
 
     if (!userId) {
@@ -72,6 +75,14 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { name, principal, interest_rate, payment_date } = body;
+
+    console.log('Creating debt with:', {
+      user_id: userId,
+      name,
+      principal,
+      interest_rate,
+      payment_date,
+    });
 
     const { data, error } = await supabase
       .from('debts')
@@ -88,9 +99,11 @@ export async function POST(req: NextRequest) {
       .select();
 
     if (error) {
+      console.error('Database error:', error.message, error.details);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    console.log('Debt created successfully:', data);
     return NextResponse.json(data[0], { status: 201 });
   } catch (error) {
     console.error('Error creating debt:', error);
