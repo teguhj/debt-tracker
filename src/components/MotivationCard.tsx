@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Debt, Payment } from '@/lib/supabase';
 
 interface MotivationCardProps {
@@ -11,6 +12,14 @@ export default function MotivationCard({
   debts,
   payments,
 }: MotivationCardProps) {
+  const [mounted, setMounted] = useState(false);
+  const [today, setToday] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setToday(new Date());
+    setMounted(true);
+  }, []);
+
   const quotes = [
     { text: '작은 시작이 큰 변화를 만듭니다', emoji: '⭐' },
     { text: '당신의 노력은 반드시 보상받을 것입니다', emoji: '💪' },
@@ -22,7 +31,10 @@ export default function MotivationCard({
     { text: '금전 자유는 당신의 손에 있습니다', emoji: '🔓' },
   ];
 
-  const today = new Date();
+  if (!mounted || !today) {
+    return null;
+  }
+
   const quoteIndex = today.getDate() % quotes.length;
   const todayQuote = quotes[quoteIndex];
 
