@@ -13,17 +13,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    let userId: string | null = null;
     const token = authHeader.replace('Bearer ', '');
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
 
-    if (userError || !userData.user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    if (!userError && userData.user) {
+      userId = userData.user.id;
+    } else {
+      // Fallback to default user ID
+      userId = process.env.NEXT_PUBLIC_DEFAULT_USER_ID || null;
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { data, error } = await supabase
       .from('debts')
       .select('*')
-      .eq('user_id', userData.user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -47,11 +55,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    let userId: string | null = null;
     const token = authHeader.replace('Bearer ', '');
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
 
-    if (userError || !userData.user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    if (!userError && userData.user) {
+      userId = userData.user.id;
+    } else {
+      // Fallback to default user ID
+      userId = process.env.NEXT_PUBLIC_DEFAULT_USER_ID || null;
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
@@ -61,7 +77,7 @@ export async function POST(req: NextRequest) {
       .from('debts')
       .insert([
         {
-          user_id: userData.user.id,
+          user_id: userId,
           name,
           principal,
           balance: principal,
