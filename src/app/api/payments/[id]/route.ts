@@ -8,9 +8,10 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -27,7 +28,7 @@ export async function DELETE(
     const { data: paymentData, error: getError } = await supabase
       .from('payments')
       .select('debt_id, amount')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (getError || !paymentData) {

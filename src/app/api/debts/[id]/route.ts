@@ -8,9 +8,10 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,7 +27,7 @@ export async function GET(
     const { data, error } = await supabase
       .from('debts')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', userData.user.id)
       .single();
 
@@ -46,9 +47,10 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -74,7 +76,7 @@ export async function PUT(
         payment_date,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', userData.user.id)
       .select();
 
@@ -94,9 +96,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -112,7 +115,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('debts')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', userData.user.id);
 
     if (error) {
