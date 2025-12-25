@@ -28,7 +28,12 @@ export default function MotivationCard({
 
   // 다음 납입일 계산
   const getUpcomingPayments = () => {
-    const upcomingPayments = [];
+    const upcomingPayments: Array<{
+      name: string;
+      date: Date;
+      daysUntil: number;
+      balance: number;
+    }> = [];
     debts.forEach((debt) => {
       const paymentDay = debt.payment_date;
       const nextPayment = new Date(today.getFullYear(), today.getMonth(), paymentDay);
