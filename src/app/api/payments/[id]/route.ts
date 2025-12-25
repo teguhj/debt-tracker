@@ -51,7 +51,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('payments')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 });
