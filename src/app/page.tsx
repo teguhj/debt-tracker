@@ -10,6 +10,7 @@ import MotivationCard from '@/components/MotivationCard';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
@@ -53,17 +54,29 @@ export default function Home() {
     checkAuth();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (token?: string) => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) return;
+      let useToken = token;
 
-      const token = sessionData.session.access_token;
+      // If no token provided, try to get from Supabase session
+      if (!useToken) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          useToken = sessionData.session.access_token;
+        }
+      }
+
+      // Fall back to authToken from state
+      if (!useToken && authToken) {
+        useToken = authToken;
+      }
+
+      if (!useToken) return;
 
       // Fetch debts
       const debtsResponse = await fetch('/api/debts', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${useToken}`,
         },
       });
       if (debtsResponse.ok) {
@@ -74,7 +87,7 @@ export default function Home() {
       // Fetch payments
       const paymentsResponse = await fetch('/api/payments', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${useToken}`,
         },
       });
       if (paymentsResponse.ok) {
@@ -94,25 +107,34 @@ export default function Home() {
       try {
         // Try anonymous auth, but don't fail if it doesn't work
         const { data, error } = await supabase.auth.signInAnonymously();
+
+        let token: string | null = null;
+
         if (!error && data.session) {
-          setIsAuthenticated(true);
-          setPassword('');
-          setPasswordError('');
-          await fetchData();
+          // Use actual session token
+          token = data.session.access_token;
         } else {
-          // If anonymous auth fails, still allow access (fallback)
-          // Create a dummy session to allow data operations
+          // Use anonKey as fallback token
+          token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || null;
+        }
+
+        if (token) {
+          setAuthToken(token);
           setIsAuthenticated(true);
           setPassword('');
           setPasswordError('');
-          await fetchData();
+          await fetchData(token);
         }
       } catch (err) {
-        // Fallback: just authenticate with password
-        setIsAuthenticated(true);
-        setPassword('');
-        setPasswordError('');
-        await fetchData();
+        // Fallback: use anonKey as token
+        const token = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || null;
+        if (token) {
+          setAuthToken(token);
+          setIsAuthenticated(true);
+          setPassword('');
+          setPasswordError('');
+          await fetchData(token);
+        }
       }
     } else {
       setPasswordError('비밀번호가 틀렸습니다');
@@ -123,6 +145,7 @@ export default function Home() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAuthenticated(false);
+    setAuthToken(null);
     setDebts([]);
     setPayments([]);
   };
@@ -135,16 +158,13 @@ export default function Home() {
     }
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) return;
-
-      const token = sessionData.session.access_token;
+      if (!authToken) return;
 
       const response = await fetch('/api/debts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           name: newDebt.name,
@@ -155,7 +175,7 @@ export default function Home() {
       });
 
       if (response.ok) {
-        await fetchData();
+        await fetchData(authToken);
         setNewDebt({
           name: '',
           principal: '',
@@ -177,16 +197,13 @@ export default function Home() {
     }
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) return;
-
-      const token = sessionData.session.access_token;
+      if (!authToken) return;
 
       const response = await fetch('/api/payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           debt_id: selectedDebtId,
@@ -200,7 +217,7 @@ export default function Home() {
         setShowMessage(randomMessage);
         setTimeout(() => setShowMessage(false), 3500);
 
-        await fetchData();
+        await fetchData(authToken);
         setPayment({
           amount: '',
           date: '',
@@ -217,20 +234,17 @@ export default function Home() {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) return;
-
-      const token = sessionData.session.access_token;
+      if (!authToken) return;
 
       const response = await fetch(`/api/debts/${id}`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
       });
 
       if (response.ok) {
-        await fetchData();
+        await fetchData(authToken);
       }
     } catch (error) {
       console.error('Error deleting debt:', error);
